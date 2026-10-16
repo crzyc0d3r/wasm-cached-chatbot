@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Riverside Club Assistant</title>
+<style>body{max-width:700px;margin:3rem auto;padding:0 1rem;font:17px system-ui;color:#193829;background:#f4f7f4}h1{font-size:2rem}form{display:flex;gap:.5rem}input{flex:1;min-width:0;padding:.8rem;font:inherit}button{padding:.7rem;font:inherit;cursor:pointer}article{white-space:pre-wrap;border-bottom:1px solid #cad8ce;padding:1rem 0}#status{min-height:1.5rem;color:#46594d}label{display:block;margin:.8rem 0}</style>
+<main><h1>Riverside Club Assistant</h1><p>Ask about training, trial sessions, or joining the club.</p><section id="messages" aria-live="polite"></section><form id="chat"><input id="message" aria-label="Your question" maxlength="1000" required autocomplete="off"><button id="send">Send</button></form><p id="status" role="status"></p><button id="clear" type="button">Start a new conversation</button></main>
+<script type="module">
+const id = sessionStorage.getItem("club-session") ?? crypto.randomUUID();
+sessionStorage.setItem("club-session", id);
+const form = document.querySelector("#chat"), input = document.querySelector("#message"), send = document.querySelector("#send"), status = document.querySelector("#status"), messages = document.querySelector("#messages");
+function append(role, text) { const entry = document.createElement("article"); entry.textContent = role + ": " + text; messages.append(entry); }
+form.addEventListener("submit", async event => {
+  event.preventDefault(); const message = input.value.trim(); if (!message) return;
+  append("You", message); input.value = ""; send.disabled = true; status.textContent = "Thinking…";
+  try { const response = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json", "x-session-id": id }, body: JSON.stringify({ message }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); append("Assistant", result.message); status.textContent = response.headers.get("x-served-by-cache") === "true" ? "Answered from cache" : "Answered by the model"; }
+  catch (error) { status.textContent = error.message ?? "Request failed"; }
+  finally { send.disabled = false; input.focus(); }
+});
+document.querySelector("#clear").addEventListener("click", async () => { try { const response = await fetch("/api/session", { method: "DELETE", headers: { "x-session-id": id } }); if (!response.ok) throw new Error("Could not reset the conversation"); messages.replaceChildren(); status.textContent = "Conversation cleared"; } catch (error) { status.textContent = error.message; } });
+</script></html>
+

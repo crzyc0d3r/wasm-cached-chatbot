@@ -1,0 +1,25 @@
+{
+  "name": "wasm-cached-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A Spin WebAssembly chatbot with an Ollama backend, context-aware caching, and session memory.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:wasm": "node --test tests/wasm-runtime.mjs",
+    "start": "node src/local.mjs"
+  },
+  "engines": {"node": ">=22"},
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "@spinframework/spin-kv": "1.0.1",
+    "@spinframework/spin-variables": "1.0.1",
+    "@spinframework/wasi-http-proxy": "2.0.0"
+  },
+  "devDependencies": {
+    "@spinframework/build-tools": "2.1.3",
+    "esbuild": "0.28.2"
+  }
+}
+

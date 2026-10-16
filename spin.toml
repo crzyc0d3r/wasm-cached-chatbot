@@ -1,0 +1,30 @@
+spin_manifest_version = 2
+
+[application]
+name = "wasm-cached-chatbot"
+version = "1.0.0"
+description = "An isolated chatbot API with a dedicated Ollama backend and persistent KV cache."
+
+[variables]
+ollama_url = { default = "http://127.0.0.1:11434" }
+ollama_model = { default = "qwen2.5:7b" }
+secret_sauce = { required = true, secret = true }
+
+[[trigger.http]]
+route = "/..."
+component = "chatbot"
+
+[component.chatbot]
+source = "dist/chatbot.wasm"
+allowed_outbound_hosts = ["{{ ollama_url }}"]
+key_value_stores = ["default"]
+
+[component.chatbot.variables]
+ollama_url = "{{ ollama_url }}"
+ollama_model = "{{ ollama_model }}"
+secret_sauce = "{{ secret_sauce }}"
+
+[component.chatbot.build]
+command = "npm run build"
+watch = ["src/**/*.mjs", "public/index.html", "build.mjs"]
+

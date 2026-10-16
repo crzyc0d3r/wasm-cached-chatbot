@@ -1,0 +1,50 @@
+#cloud-config
+package_update: true
+packages:
+  - ubuntu-drivers-common
+  - curl
+write_files:
+  - path: /usr/local/sbin/initialize-inference
+    permissions: '0700'
+    content: |
+      #!/bin/sh
+      set -eu
+      test ! -f /var/lib/inference-initialized || exit 0
+      nvidia-smi
+      curl -fsSL https://ollama.com/install.sh | sh
+      mkdir -p /etc/systemd/system/ollama.service.d
+      printf '[Service]\nEnvironment="OLLAMA_HOST=0.0.0.0:11434"\nEnvironment="OLLAMA_KEEP_ALIVE=-1"\n' > /etc/systemd/system/ollama.service.d/endpoint.conf
+      systemctl daemon-reload
+      systemctl restart ollama
+      attempt=0
+      until curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; do
+        attempt=$((attempt + 1))
+        test "$attempt" -lt 60 || exit 1
+        sleep 2
+      done
+      ollama pull '${model}'
+      curl -fsS http://127.0.0.1:11434/api/generate -d '{"model":"${model}","prompt":"","stream":false,"keep_alive":-1}' >/dev/null
+      touch /var/lib/inference-initialized
+      systemctl disable initialize-inference.service
+  - path: /etc/systemd/system/initialize-inference.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Initialize dedicated GPU inference
+      Wants=network-online.target
+      After=network-online.target
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/sbin/initialize-inference
+      TimeoutStartSec=1800
+      [Install]
+      WantedBy=multi-user.target
+runcmd:
+  - 'apt-get install -y "linux-headers-$(uname -r)"'
+  - ubuntu-drivers install
+  - systemctl enable initialize-inference.service
+power_state:
+  mode: reboot
+  timeout: 30
+  condition: true
+
